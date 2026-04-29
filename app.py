@@ -65,7 +65,7 @@ def home():
     <html>
     <head>
         <meta charset="UTF-8">
-        <title>架空翻訳</title>
+        <title>亜語翻訳</title>
 
         <link href="https://fonts.googleapis.com/css2?family=Noto+Sans&display=swap" rel="stylesheet">
 
@@ -97,7 +97,7 @@ def home():
     </head>
     <body>
 
-        <h1>架空翻訳</h1>
+        <h1>亜語翻訳機</h1>
 
         <input id="text" placeholder="文章を入力">
         <button onclick="runTranslate()">翻訳</button>
