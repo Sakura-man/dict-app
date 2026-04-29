@@ -1,11 +1,11 @@
 from fastapi import FastAPI
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, PlainTextResponse
 import json
-from fastapi.responses import PlainTextResponse
 
 app = FastAPI()
 
 
+# 辞書読み込み
 def load_dictionary():
     try:
         with open("dictionary.json", "r", encoding="utf-8") as f:
@@ -14,35 +14,50 @@ def load_dictionary():
         return {}
 
 
+# 日本語 → 亜語変換（リスト対応版）
 def translate_word(word):
     dictionary = load_dictionary()
     word = word.strip()
 
-    if word in dictionary:
-        return dictionary[word]
+    # 日本語がリストに含まれているか探す
+    for conlang, jp_list in dictionary.items():
+        if word in jp_list:
+            return conlang
 
-    w = word.lower()
-
-    if w == "not":
-        return "no"
-
-    if w.endswith("ed"):
-        base = w[:-2]
-        return dictionary.get(base, base) + "-ta"
-
-    if w.endswith("s"):
-        base = w[:-1]
-        return dictionary.get(base, base) + "-ra"
-
-    return dictionary.get(w, word)
+    return word
 
 
+# 文変換
 def translate_sentence(text):
-    words = text.split()
-    return " ".join(translate_word(w) for w in words)
+    dictionary = load_dictionary()
+    
+    result = []
+    i = 0
+    text = text.strip()
 
+    # 長い単語を優先してマッチ
+    jp_words = []
+    for v in dictionary.values():
+        jp_words.extend(v)
+    jp_words = sorted(jp_words, key=len, reverse=True)
 
-# UIページ
+    while i < len(text):
+        matched = False
+
+        for word in jp_words:
+            if text.startswith(word, i):
+                result.append(translate_word(word))
+                i += len(word)
+                matched = True
+                break
+
+        if not matched:
+            result.append(text[i])
+            i += 1
+
+    return " ".join(result)
+
+# UI
 @app.get("/", response_class=HTMLResponse)
 def home():
     return """
@@ -50,9 +65,8 @@ def home():
     <html>
     <head>
         <meta charset="UTF-8">
-        <title>架空言語翻訳</title>
+        <title>架空翻訳</title>
 
-        <!-- フォント -->
         <link href="https://fonts.googleapis.com/css2?family=Noto+Sans&display=swap" rel="stylesheet">
 
         <style>
@@ -78,26 +92,25 @@ def home():
             #result {
                 margin-top: 30px;
                 font-size: 24px;
-                color: #333;
             }
         </style>
     </head>
     <body>
 
-        <h1>架空言語翻訳</h1>
+        <h1>架空翻訳</h1>
 
         <input id="text" placeholder="文章を入力">
-       <button onclick="runTranslate()">翻訳</button>
+        <button onclick="runTranslate()">翻訳</button>
 
         <div id="result"></div>
 
         <script>
-        async function runTranslate() {
-            const text = document.getElementById("text").value;
-            const res = await fetch(`/translate?text=${encodeURIComponent(text)}`);
-            const data = await res.text();
-            document.getElementById("result").innerText = data;
-        }
+            async function runTranslate() {
+                const text = document.getElementById("text").value;
+                const res = await fetch(`/translate?text=${encodeURIComponent(text)}`);
+                const data = await res.text();
+                document.getElementById("result").innerText = data;
+            }
         </script>
 
     </body>
